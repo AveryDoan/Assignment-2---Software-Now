@@ -179,15 +179,50 @@ def format_result_str(value: float) -> str:
 
 # Main interface
 
-def evaluate_file(input_path: str) -> list:
-    abs_input  = os.path.abspath(input_path)
-    output_dir = os.path.dirname(abs_input)
+def evaluate_node(node: dict) -> float:
+
+    t = node['type']
+    if t == 'num':
+        return float(node['value'])
+    if t == 'neg':
+        return -evaluate_node(node['operand'])
+    if t == 'binop':
+        left  = evaluate_node(node['left'])
+        right = evaluate_node(node['right'])
+        op    = node['op']
+        if op == '+':
+            return left + right
+        if op == '-':
+            return left - right
+        if op == '*':
+            return left * right
+        if op == '/':
+            if right == 0:
+                raise ZeroDivisionError("Division by zero")
+            return left / right
+    raise ValueError(f"Unknown node type: {t}")
+
+
+def format_result_str(value: float) -> str:
+
+    rounded = round(value, 4)
+    if rounded == int(rounded):
+        return str(int(rounded))
+    return f'{rounded:.4f}'
+
+
+# 5. Evaluate file
+
+
+def evaluate_file(input_path: str) -> list[dict]:
+    abs_input   = os.path.abspath(input_path)
+    output_dir  = os.path.dirname(abs_input)
     output_path = os.path.join(output_dir, 'output.txt')
 
     with open(abs_input, 'r', encoding='utf-8') as f:
         lines = f.readlines()
 
-    results      = []
+    results       = []
     output_blocks = []
 
     for line in lines:
@@ -197,8 +232,11 @@ def evaluate_file(input_path: str) -> list:
         tokens = tokenize(expr)
 
         if tokens is None:
-            # all fields are ERROR
-            entry = {'input': expr, 'tree': 'ERROR', 'tokens': 'ERROR', 'result': 'ERROR'}
+            # Unrecognised character — all fields are ERROR
+            entry = {
+                'input': expr, 'tree': 'ERROR',
+                'tokens': 'ERROR', 'result': 'ERROR'
+            }
             results.append(entry)
             output_blocks.append(
                 f'Input: {expr}\nTree: ERROR\nTokens: ERROR\nResult: ERROR'
@@ -207,12 +245,15 @@ def evaluate_file(input_path: str) -> list:
 
         tokens_str = format_tokens(tokens)
 
-        # Step 2: Parse
+        # Step 2: Parse 
         tree_node, parse_error = parse(tokens)
 
         if tree_node is None:
-            # Parse failed – tokens are shown but tree and result are ERROR
-            entry = {'input': expr, 'tree': 'ERROR', 'tokens': tokens_str, 'result': 'ERROR'}
+            # Parse failed — show tokens but tree and result are ERROR
+            entry = {
+                'input': expr, 'tree': 'ERROR',
+                'tokens': tokens_str, 'result': 'ERROR'
+            }
             results.append(entry)
             output_blocks.append(
                 f'Input: {expr}\nTree: ERROR\nTokens: {tokens_str}\nResult: ERROR'
@@ -221,14 +262,20 @@ def evaluate_file(input_path: str) -> list:
 
         tree_str = format_tree(tree_node)
 
-        # Step 3: Evaluate
+        # Step 3: Evaluate 
         try:
-            value        = evaluate_node(tree_node)
-            result_disp  = format_result_str(value)
-            entry = {'input': expr, 'tree': tree_str, 'tokens': tokens_str, 'result': value}
+            value       = evaluate_node(tree_node)
+            result_disp = format_result_str(value)
+            entry = {
+                'input': expr, 'tree': tree_str,
+                'tokens': tokens_str, 'result': value
+            }
         except (ZeroDivisionError, ValueError, OverflowError):
             result_disp = 'ERROR'
-            entry = {'input': expr, 'tree': tree_str, 'tokens': tokens_str, 'result': 'ERROR'}
+            entry = {
+                'input': expr, 'tree': tree_str,
+                'tokens': tokens_str, 'result': 'ERROR'
+            }
 
         results.append(entry)
         output_blocks.append(
@@ -240,7 +287,7 @@ def evaluate_file(input_path: str) -> list:
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(output_content)
 
+    return results 
 
-# Main
-if __name__ == "__main__":
-    evaluate_file("sample_input.txt")
+if __name__ == '__main__':
+    evaluate_file('sample_input.txt')
