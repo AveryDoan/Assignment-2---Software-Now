@@ -239,3 +239,8 @@ def evaluate_file(input_path: str) -> list:
     output_content = '\n\n'.join(output_blocks) + '\n'
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(output_content)
+
+
+# Main
+if __name__ == "__main__":
+    evaluate_file("sample_input.txt")
